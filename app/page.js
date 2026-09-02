@@ -154,12 +154,17 @@ function ProgressRail({ game, navigate }) {
   );
 }
 
-function DefinitionOfDone() {
+function DefinitionOfDone({ className = "", showSummary = false }) {
   return (
-    <section className="dod-card" aria-labelledby="dod-title">
-      <div>
+    <section className={`dod-card ${className}`} aria-labelledby="dod-title">
+      <div className="dod-heading">
         <p className="eyebrow">One quality bar · every sprint</p>
         <h2 id="dod-title">Definition of Done</h2>
+        {showSummary && (
+          <p className="dod-summary">
+            A plane counts as passed only when every check is true.
+          </p>
+        )}
       </div>
       <ul className="check-list">
         <li><span><Icon name="check" /></span>Uses one sheet of paper</li>
@@ -168,6 +173,64 @@ function DefinitionOfDone() {
         <li><span><Icon name="check" /></span>Flies at least 3 metres</li>
         <li><span><Icon name="check" /></span>Accepted by the facilitator</li>
       </ul>
+    </section>
+  );
+}
+
+function FoldGuide() {
+  const steps = [
+    {
+      title: "Make the centre line",
+      detail: "Fold the sheet in half lengthways, crease it firmly, then open it again.",
+    },
+    {
+      title: "Shape the nose",
+      detail: "Bring both top corners in so their edges meet neatly on the centre line.",
+    },
+    {
+      title: "Blunt the point",
+      detail: "Fold the top tip down by about 2 cm to create a flat, safer leading edge.",
+    },
+    {
+      title: "Lock the shape",
+      detail: "Fold the new top corners inward, then lift the small centre flap over them.",
+    },
+    {
+      title: "Form the wings",
+      detail: "Fold the plane in half and bring each wing down evenly on both sides.",
+    },
+  ];
+
+  return (
+    <section className="fold-guide" aria-labelledby="fold-guide-title">
+      <div className="fold-guide-heading">
+        <div>
+          <p className="eyebrow light">Product guide · same design every sprint</p>
+          <h1 id="fold-guide-title">How to fold <em>the plane.</em></h1>
+          <p>
+            Use one repeatable five-step design. The process can change between sprints; the product standard cannot.
+          </p>
+        </div>
+        <PlaneMark />
+      </div>
+
+      <div className="fold-facts" aria-label="Plane design facts">
+        <span><strong>1</strong> sheet</span>
+        <span><strong>5</strong> fold stages</span>
+        <span><strong>0</strong> sharp points</span>
+      </div>
+
+      <ol className="fold-steps">
+        {steps.map((step, index) => (
+          <li key={step.title}>
+            <span className="fold-step-number">{String(index + 1).padStart(2, "0")}</span>
+            <span>
+              <strong>{step.title}</strong>
+              <small>{step.detail}</small>
+            </span>
+          </li>
+        ))}
+      </ol>
     </section>
   );
 }
@@ -198,91 +261,54 @@ function SetupView({ game, setGame, onStart }) {
 
   return (
     <div className="view-stack">
-      <section className="setup-hero">
-        <div className="hero-copy">
-          <p className="eyebrow light">Three sprints · one shared challenge</p>
-          <h1>Turn paper into <em>flow.</em></h1>
-          <p>
-            Run a fast factory simulation, capture the evidence and see whether a team’s process actually improves.
-          </p>
-          <div className="hero-facts" aria-label="Activity facts">
-            <span><strong>3</strong> sprints</span>
-            <span><strong>3:00</strong> each</span>
-            <span><strong>5</strong> teams max</span>
-          </div>
-        </div>
-        <div className="hero-plane" aria-hidden="true">
-          <div className="flight-path path-one" />
-          <div className="flight-path path-two" />
-          <PlaneMark />
-          <span className="measurement">3 m</span>
-        </div>
-      </section>
-
-      <div className="setup-grid">
-        <section className="panel setup-panel" aria-labelledby="teams-title">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Factory floor</p>
-              <h2 id="teams-title">Set up your teams</h2>
-            </div>
-            <label className="team-count">
-              <span>Teams</span>
-              <NativeSelect value={game.teams.length} onChange={(event) => setTeamCount(Number(event.target.value))}>
-                {Array.from({ length: MAX_TEAMS }, (_, index) => index + 1).map((count) => (
-                  <NativeSelectOption key={count} value={count}>{count}</NativeSelectOption>
-                ))}
-              </NativeSelect>
-            </label>
-          </div>
-
-          <div className="team-editor-list">
-            {game.teams.map((team, index) => (
-              <div className="team-editor" key={team.id} style={{ "--team": team.colour }}>
-                <span className="team-number">{index + 1}</span>
-                <label>
-                  <span>Team name</span>
-                  <input
-                    value={team.name}
-                    maxLength={28}
-                    onChange={(event) => updateTeam(team.id, "name", event.target.value)}
-                    onBlur={(event) => !event.target.value.trim() && updateTeam(team.id, "name", `Team ${index + 1}`)}
-                  />
-                </label>
-                <label>
-                  <span>Students</span>
-                  <NativeSelect value={team.size} onChange={(event) => updateTeam(team.id, "size", Number(event.target.value))}>
-                    <NativeSelectOption value={4}>4</NativeSelectOption>
-                    <NativeSelectOption value={5}>5</NativeSelectOption>
-                  </NativeSelect>
-                </label>
-              </div>
-            ))}
-          </div>
-
-          <button className="primary-button start-button" type="button" onClick={onStart}>
-            Start the factory <Icon name="arrow" />
-          </button>
-        </section>
-
-        <DefinitionOfDone />
+      <div className="setup-guide-column">
+        <FoldGuide />
+        <DefinitionOfDone className="dod-card--setup" showSummary />
       </div>
 
-      <section className="round-preview" aria-labelledby="rounds-title">
-        <div className="section-heading">
-          <p className="eyebrow">The experiment</p>
-          <h2 id="rounds-title">Same goal. Three ways of working.</h2>
+      <section className="panel setup-panel" aria-labelledby="teams-title">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">Factory floor</p>
+            <h2 id="teams-title">Set up your teams</h2>
+          </div>
+          <label className="team-count">
+            <span>Teams</span>
+            <NativeSelect value={game.teams.length} onChange={(event) => setTeamCount(Number(event.target.value))}>
+              {Array.from({ length: MAX_TEAMS }, (_, index) => index + 1).map((count) => (
+                <NativeSelectOption key={count} value={count}>{count}</NativeSelectOption>
+              ))}
+            </NativeSelect>
+          </label>
         </div>
-        <div className="round-card-grid">
-          {SPRINTS.map((sprint) => (
-            <article key={sprint.number} className={`round-card round-card--${sprint.number}`}>
-              <span className="round-number">0{sprint.number}</span>
-              <p>{sprint.eyebrow}</p>
-              <h3>{sprint.title}</h3>
-              <span>{sprint.shortTitle}</span>
-            </article>
+
+        <div className="team-editor-list">
+          {game.teams.map((team, index) => (
+            <div className="team-editor" key={team.id} style={{ "--team": team.colour }}>
+              <span className="team-number">{index + 1}</span>
+              <label>
+                <span>Team name</span>
+                <input
+                  value={team.name}
+                  maxLength={28}
+                  onChange={(event) => updateTeam(team.id, "name", event.target.value)}
+                  onBlur={(event) => !event.target.value.trim() && updateTeam(team.id, "name", `Team ${index + 1}`)}
+                />
+              </label>
+              <label>
+                <span>Students</span>
+                <NativeSelect value={team.size} onChange={(event) => updateTeam(team.id, "size", Number(event.target.value))}>
+                  <NativeSelectOption value={4}>4</NativeSelectOption>
+                  <NativeSelectOption value={5}>5</NativeSelectOption>
+                </NativeSelect>
+              </label>
+            </div>
           ))}
         </div>
+
+        <button className="primary-button start-button" type="button" onClick={onStart}>
+          Start the factory <Icon name="arrow" />
+        </button>
       </section>
     </div>
   );
