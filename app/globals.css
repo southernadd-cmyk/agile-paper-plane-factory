@@ -1723,10 +1723,6 @@ input {
     grid-template-columns: 1fr;
   }
 
-  .setup-panel {
-    order: -1;
-  }
-
   .setup-hero {
     min-height: 352px;
     grid-template-columns: 1.1fr 0.9fr;
@@ -1799,7 +1795,13 @@ input {
   }
 
   .hero-plane {
-    display: none;
+    min-height: 220px;
+    display: grid;
+  }
+
+  .setup-hero .hero-plane .plane-mark {
+    width: 185px;
+    height: 185px;
   }
 
   .score-grid,
@@ -1872,6 +1874,29 @@ input {
   .hero-facts {
     gap: 13px;
     flex-wrap: wrap;
+  }
+
+  .setup-hero {
+    padding: 28px 24px 24px;
+  }
+
+  .hero-plane {
+    min-height: 190px;
+  }
+
+  .setup-hero .hero-plane .plane-mark {
+    width: 160px;
+    height: 160px;
+  }
+
+  .path-one {
+    width: 250px;
+    height: 125px;
+  }
+
+  .path-two {
+    width: 310px;
+    height: 160px;
   }
 
   .dod-card--setup .check-list {
