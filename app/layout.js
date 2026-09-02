@@ -1,0 +1,24 @@
+import "./globals.css";
+
+export const metadata = {
+  title: "The Plane Factory",
+  description: "A facilitator dashboard for the Agile paper airplane factory game.",
+  icons: {
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+  },
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#13283a",
+};
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  );
+}
