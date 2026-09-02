@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fold the dart</title>
+<style>
+  /* Colours read from the host page where possible, with sane fallbacks.
+     Set --fg-ink / --fg-mark / --fg-paper on the iframe or parent to retheme. */
+  /* Self-contained: an iframe is a separate document, so custom properties
+     from the host page do not reach in here. Retheme by editing these. */
+  :root{
+    --ink:#15202f;
+    --ink-soft:#5c6b7d;
+    --paper:#ffffff;
+    --shade:#e3e9f0;
+    --mark:#ed6647;   /* matches the factory's orange accent */
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:#fbfcfd}
+  body{padding:16px 18px 18px}
+  body{
+    color:var(--ink);
+    font-family:inherit;
+    font:inherit;
+    font-family:"Archivo","Inter","Helvetica Neue",Arial,sans-serif;
+    font-size:15px;
+  }
+  .guide{display:grid;grid-template-columns:1fr;gap:14px;align-items:center}
+  @media (min-width:560px){
+    .guide{grid-template-columns:minmax(0,1.15fr) minmax(190px,.85fr);gap:26px}
+    .guide .frame{grid-row:1 / span 2}
+    .say{align-self:end}
+    .bar{align-self:start}
+  }
+
+  .frame{position:relative}
+  .frame svg{display:block;width:100%;height:auto;max-height:78vh;min-height:300px}
+  #paper-shape{fill:var(--paper);stroke:var(--ink);stroke-width:1.6;stroke-linejoin:round}
+  .fold-layer{fill:var(--shade);stroke:var(--ink);stroke-width:1.4;stroke-linejoin:round}
+  .crease-open{fill:none;stroke:var(--ink-soft);stroke-width:1.4;stroke-dasharray:8 6}
+  .crease-set{fill:none;stroke:var(--ink);stroke-width:1.2}
+  .arrow{fill:none;stroke:var(--mark);stroke-width:3.4;stroke-linecap:round}
+  .marks{animation:mark-in 380ms ease both}
+  @keyframes mark-in{from{opacity:0}to{opacity:1}}
+  .flying{animation:glide 3.6s ease-in-out infinite}
+  @keyframes glide{0%,100%{transform:translate(0,0) rotate(0)}50%{transform:translate(9px,-14px) rotate(-2deg)}}
+
+  .say{margin:0;min-height:2.9em;line-height:1.5;font-size:1.12em}
+  .say b{display:block;font-weight:700;font-size:.78em;letter-spacing:.01em;color:var(--ink-soft);margin-bottom:3px}
+
+  .bar{display:flex;align-items:center;gap:8px}
+  .pips{display:flex;gap:4px;flex:1 1 auto}
+  .pips button{
+    flex:1 1 0;height:6px;min-width:0;padding:0;border:0;border-radius:99px;
+    background:color-mix(in srgb, var(--ink) 18%, transparent);cursor:pointer;
+    transition:background 160ms;
+  }
+  .pips button.done{background:var(--mark)}
+  .pips button[aria-current="true"]{background:var(--ink)}
+  .step{display:flex;gap:6px;flex:0 0 auto}
+  .step button{
+    font:inherit;font-weight:600;line-height:1;width:34px;height:34px;
+    border:1.5px solid var(--ink);border-radius:2px;background:transparent;color:var(--ink);cursor:pointer;
+  }
+  .step button:hover:not(:disabled){background:var(--mark);border-color:var(--mark)}
+  .step button:disabled{opacity:.3;cursor:default}
+  .step button:focus-visible,.pips button:focus-visible{outline:2.5px solid var(--mark);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="guide">
+  <div class="frame">
+    <svg viewBox="48 24 224 336" role="img" aria-labelledby="d">
+      <desc id="d">Diagram of the current fold</desc>
+      <defs>
+        <marker id="tip" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--mark)"></path>
+        </marker>
+      </defs>
+      <g id="layers"></g>
+    </svg>
+  </div>
+
+  <p class="say" id="say" aria-live="polite"></p>
+
+  <div class="bar">
+    <div class="pips" id="pips" role="tablist" aria-label="Folds"></div>
+    <div class="step">
+      <button id="back" type="button" aria-label="Previous fold">&larr;</button>
+      <button id="next" type="button" aria-label="Next fold">&rarr;</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var SVGNS = "http://www.w3.org/2000/svg";
+  var A = 160, L = 60, R = 260, T = 40, B = 340, Y1 = 140, Y2 = 281.4, M2 = 181.4;
+  function P(){ return Array.prototype.slice.call(arguments); }
+
+  var flatSheet  = [P(A,T), P(R,T),  P(R,Y1), P(R,B), P(L,B), P(L,Y1), P(L,T)];
+  var pointedTop = [P(A,T), P(R,Y1), P(R,Y1), P(R,B), P(L,B), P(L,Y1), P(L,Y1)];
+  var sharpNose  = [P(A,T), P(R,Y2), P(R,Y2), P(R,B), P(L,B), P(L,Y2), P(L,Y2)];
+  var halved     = [P(A,T), P(A,Y2), P(A,Y2), P(A,B), P(L,B), P(L,Y2), P(L,Y2)];
+
+  var cornerL_open = [P(L,T),  P(A,T), P(L,Y1)];
+  var cornerR_open = [P(R,T),  P(A,T), P(R,Y1)];
+  var cornerL_fold = [P(A,Y1), P(A,T), P(L,Y1)];
+  var cornerR_fold = [P(A,Y1), P(A,T), P(R,Y1)];
+  var edgeL_fold   = [P(A,M2), P(A,T), P(L,Y2)];
+  var edgeR_fold   = [P(A,M2), P(A,T), P(R,Y2)];
+  var edgeR_hidden = [P(A,M2), P(A,T), P(A,Y2)];
+
+  var wingL = [P(A,60), P(115,345), P(65,345)];
+  var wingR = [P(A,60), P(205,345), P(255,345)];
+  var body  = [P(A,60), P(205,345), P(A,300), P(115,345)];
+
+  var steps = [
+    { view:"top", say:"One sheet, portrait, flat on the table.",
+      shapes:{paper:{pts:flatSheet,a:1}, flapL:{pts:cornerL_open,a:0}, flapR:{pts:cornerR_open,a:0}}, marks:[] },
+    { view:"top", say:"Fold in half lengthwise, crease it, open it back out.",
+      shapes:{paper:{pts:flatSheet,a:1}, flapL:{pts:cornerL_open,a:0}, flapR:{pts:cornerR_open,a:0}},
+      marks:[{t:"line",cls:"crease-open",d:"M "+A+" "+T+" L "+A+" "+B},{t:"arrow",d:"M 235 205 Q 160 158 85 205"}] },
+    { view:"top", say:"Both top corners in, until their edges meet the crease.",
+      shapes:{paper:{pts:pointedTop,a:1}, flapL:{pts:cornerL_fold,a:1}, flapR:{pts:cornerR_fold,a:1}},
+      marks:[{t:"line",cls:"crease-set",d:"M "+A+" "+T+" L "+A+" "+B},{t:"arrow",d:"M 82 62 Q 132 72 143 118"},{t:"arrow",d:"M 238 62 Q 188 72 177 118"}] },
+    { view:"top", say:"Fold the two new slanted edges in to the crease as well.",
+      shapes:{paper:{pts:sharpNose,a:1}, flapL:{pts:edgeL_fold,a:1}, flapR:{pts:edgeR_fold,a:1}},
+      marks:[{t:"line",cls:"crease-set",d:"M "+A+" "+T+" L "+A+" "+B},{t:"arrow",d:"M 104 176 Q 136 202 152 192"},{t:"arrow",d:"M 216 176 Q 184 202 168 192"}] },
+    { view:"top", say:"Fold the whole thing in half, folded flaps on the outside.",
+      shapes:{paper:{pts:halved,a:1}, flapL:{pts:edgeL_fold,a:1}, flapR:{pts:edgeR_hidden,a:0}},
+      marks:[{t:"line",cls:"crease-set",d:"M "+A+" "+T+" L "+A+" "+B},{t:"arrow",d:"M 242 212 Q 202 176 166 206"}] },
+    { view:"top", say:"One wing down, a finger's width from the spine. Turn over, match it.",
+      shapes:{paper:{pts:halved,a:1}, flapL:{pts:edgeL_fold,a:1}, flapR:{pts:edgeR_hidden,a:0}},
+      marks:[{t:"line",cls:"crease-set",d:"M "+A+" "+T+" L "+A+" "+B},{t:"line",cls:"crease-open",d:"M 152 70 L 95 340"},{t:"arrow",d:"M 148 246 Q 114 252 102 284"}] },
+    { view:"final", say:"Wings level, thrown flat at eye height. Ready to fly.",
+      shapes:{wingL:{pts:wingL,a:1}, wingR:{pts:wingR,a:1}, body:{pts:body,a:1}}, marks:[], fly:true }
+  ];
+
+  var layers = document.getElementById("layers");
+  var sayEl  = document.getElementById("say");
+  var pipsEl = document.getElementById("pips");
+  var back   = document.getElementById("back");
+  var next   = document.getElementById("next");
+
+  var still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var DUR = still ? 0 : 620;
+  var idx = -1, view = null, nodes = {}, cur = {}, raf = null;
+
+  function str(p){ var o=[]; for(var i=0;i<p.length;i++) o.push(p[i][0].toFixed(2)+","+p[i][1].toFixed(2)); return o.join(" "); }
+  function copy(p){ var o=[]; for(var i=0;i<p.length;i++) o.push([p[i][0],p[i][1]]); return o; }
+  function ease(t){ return t<0.5 ? 4*t*t*t : 1-Math.pow(-2*t+2,3)/2; }
+
+  function build(step){
+    if (raf){ cancelAnimationFrame(raf); raf = null; }
+    layers.textContent = ""; nodes = {}; cur = {};
+    var g = document.createElementNS(SVGNS,"g");
+    if (step.fly && !still) g.setAttribute("class","flying");
+    g.style.transformOrigin = "160px 200px";
+    for (var id in step.shapes){
+      var poly = document.createElementNS(SVGNS,"polygon");
+      poly.setAttribute("class","fold-layer");
+      if (id === "paper") poly.setAttribute("id","paper-shape");
+      if (id === "wingL" || id === "wingR") poly.style.fill = "var(--paper)";
+      poly.setAttribute("points", str(step.shapes[id].pts));
+      poly.style.opacity = step.shapes[id].a;
+      g.appendChild(poly);
+      nodes[id] = poly;
+      cur[id] = { pts: copy(step.shapes[id].pts), a: step.shapes[id].a };
+    }
+    layers.appendChild(g);
+    marks(step);
+    layers.style.opacity = 0;
+    requestAnimationFrame(function(){ layers.style.transition = "opacity 340ms ease"; layers.style.opacity = 1; });
+    view = step.view;
+  }
+
+  function marks(step){
+    var old = layers.querySelector(".marks");
+    if (old) old.parentNode.removeChild(old);
+    var g = document.createElementNS(SVGNS,"g");
+    g.setAttribute("class","marks");
+    for (var i=0;i<step.marks.length;i++){
+      var m = step.marks[i], path = document.createElementNS(SVGNS,"path");
+      path.setAttribute("d", m.d);
+      path.setAttribute("class", m.t === "arrow" ? "arrow" : m.cls);
+      if (m.t === "arrow") path.setAttribute("marker-end","url(#tip)");
+      g.appendChild(path);
+    }
+    layers.appendChild(g);
+  }
+
+  function settle(step){
+    for (var id in step.shapes){
+      nodes[id].setAttribute("points", str(step.shapes[id].pts));
+      nodes[id].style.opacity = step.shapes[id].a;
+      cur[id] = { pts: copy(step.shapes[id].pts), a: step.shapes[id].a };
+    }
+  }
+
+  function morph(step){
+    if (raf){ cancelAnimationFrame(raf); raf = null; }
+    var from = {};
+    for (var id in cur) from[id] = { pts: copy(cur[id].pts), a: cur[id].a };
+    marks(step);
+    if (!DUR){ settle(step); return; }
+    var start = performance.now();
+    function frame(now){
+      var t = Math.min(1,(now-start)/DUR), e = ease(t);
+      for (var id in step.shapes){
+        var f = from[id], to = step.shapes[id], pts = [];
+        for (var i=0;i<to.pts.length;i++){
+          pts.push([ f.pts[i][0]+(to.pts[i][0]-f.pts[i][0])*e, f.pts[i][1]+(to.pts[i][1]-f.pts[i][1])*e ]);
+        }
+        nodes[id].setAttribute("points", str(pts));
+        nodes[id].style.opacity = f.a + (to.a - f.a) * e;
+        cur[id] = { pts: pts, a: f.a + (to.a - f.a) * e };
+      }
+      if (t < 1) raf = requestAnimationFrame(frame); else { raf = null; settle(step); }
+    }
+    raf = requestAnimationFrame(frame);
+  }
+
+  function show(i){
+    i = Math.max(0, Math.min(steps.length-1, i));
+    if (i === idx) return;
+    var step = steps[i];
+    if (step.view !== view) build(step); else morph(step);
+    idx = i;
+    sayEl.innerHTML = "<b>Fold " + (i+1) + " of " + steps.length + "</b>";
+    sayEl.appendChild(document.createTextNode(step.say));
+    back.disabled = (i === 0);
+    next.disabled = (i === steps.length-1);
+    var p = pipsEl.children;
+    for (var k=0;k<p.length;k++){
+      p[k].setAttribute("aria-current", k === i ? "true" : "false");
+      p[k].className = k < i ? "done" : "";
+    }
+  }
+
+  for (var i=0;i<steps.length;i++){
+    (function(n){
+      var b = document.createElement("button");
+      b.type = "button";
+      b.setAttribute("aria-label","Fold "+(n+1));
+      b.addEventListener("click", function(){ show(n); });
+      pipsEl.appendChild(b);
+    })(i);
+  }
+  next.addEventListener("click", function(){ show(idx+1); });
+  back.addEventListener("click", function(){ show(idx-1); });
+  document.addEventListener("keydown", function(e){
+    if (e.key === "ArrowRight") show(idx+1);
+    if (e.key === "ArrowLeft")  show(idx-1);
+  });
+
+  show(0);
+
+  /* Tell the host page how tall we are, so the iframe can size itself. */
+  function report(){
+    if (window.parent === window) return;
+    var h = document.querySelector(".guide").getBoundingClientRect().height;
+    window.parent.postMessage({ foldGuideHeight: Math.ceil(h) + 4 }, "*");
+  }
+  window.addEventListener("load", report);
+  window.addEventListener("resize", report);
+  new ResizeObserver(report).observe(document.querySelector(".guide"));
+})();
+</script>
+</body>
+</html>
