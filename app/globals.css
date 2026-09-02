@@ -407,18 +407,6 @@ main {
   opacity: 0.45;
 }
 
-.measurement {
-  position: absolute;
-  right: 7%;
-  bottom: 4%;
-  padding: 7px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 999px;
-  color: rgba(255, 255, 255, 0.68);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.75rem;
-}
-
 @keyframes plane-float {
   0%, 100% { transform: translateY(5px) rotate(-6deg); }
   50% { transform: translateY(-9px) rotate(-3deg); }

@@ -243,7 +243,6 @@ function SetupView({ game, setGame, onStart }) {
           <div className="flight-path path-one" />
           <div className="flight-path path-two" />
           <PlaneMark />
-          <span className="measurement">3 m</span>
         </div>
       </section>
 
