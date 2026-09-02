@@ -1,11 +1,14 @@
 import "./globals.css";
 
+const basePath =
+  process.env.GITHUB_ACTIONS === "true" ? "/agile-paper-plane-factory" : "";
+
 export const metadata = {
   title: "The Plane Factory",
   description: "A facilitator dashboard for the Agile paper airplane factory game.",
   icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
+    icon: `${basePath}/favicon.svg`,
+    shortcut: `${basePath}/favicon.svg`,
   },
 };
 
