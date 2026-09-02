@@ -2,6 +2,10 @@
 @import "tw-animate-css";
 @import "../vendor/shadcn-tailwind-4.13.0.css";
 
+.round-preview{
+display:hidden;
+}
+
 :root {
   --ink: #13283a;
   --ink-2: #244158;
